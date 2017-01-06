@@ -470,6 +470,7 @@ static inline int _apc_cache_insert(apc_cache_t* cache,
     while(*slot) {
       if(key.type == (*slot)->key.type) {
         if(key.type == APC_CACHE_KEY_FILE) {
+            //普通文件类型
             if(key_equals((*slot)->key.data.file, key.data.file)) {
                 /* If existing slot for the same device+inode is different, remove it and insert the new version */
                 if (ctxt->force_update || (*slot)->key.mtime != key.mtime) {
@@ -495,7 +496,7 @@ static inline int _apc_cache_insert(apc_cache_t* cache,
       }
       slot = &(*slot)->next;
     }
-
+    //保存缓存
     if ((*slot = make_slot(&key, value, *slot, t TSRMLS_CC)) == NULL) {
         return -1;
     }
@@ -1033,6 +1034,8 @@ int apc_cache_make_file_key(apc_cache_key_t* key,
      * set the apc.stat_ctime=true to enable this check.
      */
     if(APCG(stat_ctime)) {
+        //st_ctime： 节点最后更改时间
+        //st_mtime:  数据的最后修改时间
         key->mtime  = (fileinfo->st_buf.sb.st_ctime > fileinfo->st_buf.sb.st_mtime) ? fileinfo->st_buf.sb.st_ctime : fileinfo->st_buf.sb.st_mtime; 
     } else {
         key->mtime = fileinfo->st_buf.sb.st_mtime;
@@ -1069,6 +1072,7 @@ int apc_cache_make_user_key(apc_cache_key_t* key, char* identifier, int identifi
     key->data.user.identifier_len = identifier_len;
     key->h = string_nhash_8(key->data.user.identifier, key->data.user.identifier_len);
     key->mtime = t;
+    //用户自定义缓存
     key->type = APC_CACHE_KEY_USER;
     return 1;
 }
@@ -1099,7 +1103,7 @@ apc_cache_entry_t* apc_cache_make_file_entry(const char* filename,
     entry->data.file.classes   = classes;
 
     entry->data.file.halt_offset = apc_file_halt_offset(filename TSRMLS_CC);
-
+    //文件缓存
     entry->type = APC_CACHE_ENTRY_FILE;
     entry->ref_count = 0;
     entry->mem_size = 0;

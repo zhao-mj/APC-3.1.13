@@ -60,12 +60,12 @@ struct _apc_rfc1867_data {
 };
 /* }}} */
 
-
+//#define ZEND_BEGIN_MODULE_GLOBALS(module_name)   typedef struct _zend_##module_name##_globals {
 ZEND_BEGIN_MODULE_GLOBALS(apc)
     /* configuration parameters */
     zend_bool enabled;      /* if true, apc is enabled (defaults to true) */
-    long shm_segments;      /* number of shared memory segments to use */
-    long shm_size;          /* size of each shared memory segment (in MB) */
+    long shm_segments;     //内存块个数 /* number of shared memory segments to use */
+    long shm_size;         //每个内存块大小 /* size of each shared memory segment (in MB) */
     long num_files_hint;    /* parameter to apc_cache_create */
     long user_entries_hint;
     long gc_ttl;            /* parameter to apc_cache_create */
@@ -125,6 +125,7 @@ ZEND_BEGIN_MODULE_GLOBALS(apc)
     char *serializer_name;       /* the serializer config option */
     apc_serializer_t *serializer;/* the actual serializer in use */
 ZEND_END_MODULE_GLOBALS(apc)
+//#define ZEND_END_MODULE_GLOBALS(module_name)  }zend_##module_name##_globals;
 
 /* (the following declaration is defined in php_apc.c) */
 ZEND_EXTERN_MODULE_GLOBALS(apc)
@@ -136,6 +137,7 @@ ZEND_EXTERN_MODULE_GLOBALS(apc)
 #endif
 
 /* True globals */
+//extern可置于变量或者函数前，以表示变量或者函数的定义在别的文件中，提示编译器遇到此变量或函数时，在其它模块中寻找其定义。另外，extern也可用来进行链接指定。
 extern apc_cache_t* apc_cache;       /* the global compiler cache */
 extern apc_cache_t* apc_user_cache;  /* the global user content cache */
 extern void* apc_compiled_filters;   /* compiled filters */

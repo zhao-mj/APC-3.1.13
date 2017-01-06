@@ -35,7 +35,7 @@
 #include "apc_fcntl.h"
 #include <unistd.h>
 #include <fcntl.h>
-
+//创建文件锁
 int apc_fcntl_create(const char* pathname TSRMLS_DC)
 {
     int fd;
@@ -59,7 +59,7 @@ int apc_fcntl_create(const char* pathname TSRMLS_DC)
     apc_error("apc_fcntl_create: open(%s, O_RDWR|O_CREAT, 0666) failed:" TSRMLS_CC, pathname);
     return -1;
 }
-
+//关闭文件
 void apc_fcntl_destroy(int fd)
 {
     close(fd);
@@ -80,14 +80,14 @@ static int lock_reg(int fd, int cmd, int type, off_t offset, int whence, off_t l
   while(ret < 0 && errno == EINTR);
   return(ret);
 }
-
+//获取文件写锁
 void apc_fcntl_lock(int fd TSRMLS_DC)
 {
     if(lock_reg(fd, F_SETLKW, F_WRLCK, 0, SEEK_SET, 0) < 0) {
         apc_error("apc_fcntl_lock failed:" TSRMLS_CC);
     }
 }
-
+//获取文件读锁
 void apc_fcntl_rdlock(int fd TSRMLS_DC)
 {
     if(lock_reg(fd, F_SETLKW, F_RDLCK, 0, SEEK_SET, 0) < 0) {
@@ -103,7 +103,7 @@ zend_bool apc_fcntl_nonblocking_lock(int fd TSRMLS_DC)
     }
     return 1;
 }
-
+//释放文件锁
 void apc_fcntl_unlock(int fd TSRMLS_DC)
 {
     if(lock_reg(fd, F_SETLKW, F_UNLCK, 0, SEEK_SET, 0) < 0) {
