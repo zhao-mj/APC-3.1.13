@@ -440,11 +440,11 @@ zend_bool apc_compile_cache_entry(apc_cache_key_t *key, zend_file_handle* h, int
     if(!(alloc_op_array = apc_copy_op_array(NULL, *op_array, &ctxt TSRMLS_CC))) {
         goto freepool;
     }
-    //复制函数
+    //复制新定义的函数
     if(!(alloc_functions = apc_copy_new_functions(num_functions, &ctxt TSRMLS_CC))) {
         goto freepool;
     }
-    //复制class类
+    //复制新定义lass类
     if(!(alloc_classes = apc_copy_new_classes(*op_array, num_classes, &ctxt TSRMLS_CC))) {
         goto freepool;
     }
