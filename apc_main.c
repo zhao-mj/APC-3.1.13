@@ -399,7 +399,8 @@ zend_bool apc_compile_cache_entry(apc_cache_key_t *key, zend_file_handle* h, int
     if (*op_array == NULL) {
         return FAILURE;
     }
-
+    //定义内存池
+    //apc_sma_malloc、apc_sma_free、apc_sma_protect、apc_sma_unprotect位于apc_sma.c文件
     ctxt.pool = apc_pool_create(APC_MEDIUM_POOL, apc_sma_malloc, apc_sma_free, 
                                                  apc_sma_protect, apc_sma_unprotect TSRMLS_CC);
     if (!ctxt.pool) {
@@ -435,14 +436,15 @@ zend_bool apc_compile_cache_entry(apc_cache_key_t *key, zend_file_handle* h, int
             apc_warning("Unable to open '%s' for md5 generation." TSRMLS_CC, filename);
         }
     }
-
+    //复制op_code
     if(!(alloc_op_array = apc_copy_op_array(NULL, *op_array, &ctxt TSRMLS_CC))) {
         goto freepool;
     }
-
+    //复制函数
     if(!(alloc_functions = apc_copy_new_functions(num_functions, &ctxt TSRMLS_CC))) {
         goto freepool;
     }
+    //复制class类
     if(!(alloc_classes = apc_copy_new_classes(*op_array, num_classes, &ctxt TSRMLS_CC))) {
         goto freepool;
     }
@@ -480,7 +482,7 @@ static zend_op_array* my_compile_file(zend_file_handle* h,
     apc_context_t ctxt = {0,};
     int bailout=0;
     const char* filename = NULL;
-
+    //未开启 或者 apc_cache
     if (!APCG(enabled) || apc_cache_busy(apc_cache)) {
         return old_compile_file(h, type TSRMLS_CC);
     }
@@ -509,12 +511,14 @@ static zend_op_array* my_compile_file(zend_file_handle* h,
     apc_debug("1. h->opened_path=[%s]  h->filename=[%s]\n" TSRMLS_CC, h->opened_path?h->opened_path:"null",h->filename);
 
     /* try to create a cache key; if we fail, give up on caching */
+    //创建cache_key
     if (!apc_cache_make_file_key(&key, h->filename, PG(include_path), t TSRMLS_CC)) {
         return old_compile_file(h, type TSRMLS_CC);
     }
 
     if(!APCG(force_file_update)) {
         /* search for the file in the cache */
+        //从缓存中 查找
         cache_entry = apc_cache_find(apc_cache, key, t TSRMLS_CC);
         ctxt.force_update = 0;
     } else {
@@ -532,7 +536,7 @@ static zend_op_array* my_compile_file(zend_file_handle* h,
             return old_compile_file(h, type TSRMLS_CC);
         }
         ctxt.copy = APC_COPY_OUT_OPCODE;
-        
+        //添加到EG(included_files)中
         zend_hash_add(&EG(included_files), cache_entry->data.file.filename, 
                             strlen(cache_entry->data.file.filename)+1,
                             (void *)&dummy, sizeof(int), NULL);
@@ -603,6 +607,7 @@ static zend_op_array* my_compile_file(zend_file_handle* h,
         if (apc_compile_cache_entry(&key, h, type, t, &op_array, &cache_entry TSRMLS_CC) == SUCCESS) {
             ctxt.pool = cache_entry->pool;
             ctxt.copy = APC_COPY_IN_OPCODE;
+            //保存至apc_cache中
             if (apc_cache_insert(apc_cache, key, cache_entry, &ctxt, t TSRMLS_CC) != 1) {
                 apc_pool_destroy(ctxt.pool TSRMLS_CC);
                 ctxt.pool = NULL;
@@ -794,6 +799,8 @@ apc_serializer_t* apc_get_serializers(TSRMLS_D)
 int apc_module_init(int module_number TSRMLS_DC)
 {
     /* apc initialization */
+    //定义于apc_sma.c
+    //初始化内存管理
 #if APC_MMAP
     apc_sma_init(APCG(shm_segments), APCG(shm_size), APCG(mmap_file_mask) TSRMLS_CC);
 #else
@@ -803,6 +810,7 @@ int apc_module_init(int module_number TSRMLS_DC)
     apc_user_cache = apc_cache_create(APCG(user_entries_hint), APCG(gc_ttl), APCG(user_ttl) TSRMLS_CC);
 
     /* override compilation */
+    //覆盖 zend_compile_file
     old_compile_file = zend_compile_file;
     zend_compile_file = my_compile_file;
     REGISTER_LONG_CONSTANT("\000apc_magic", (long)&set_compile_hook, CONST_PERSISTENT | CONST_CS);
@@ -991,7 +999,7 @@ static void apc_deactivate(TSRMLS_D)
 /* }}} */
 
 /* {{{ request init and shutdown */
-
+//初始化开始调用
 int apc_request_init(TSRMLS_D)
 {
     apc_stack_clear(APCG(cache_stack));
@@ -1024,7 +1032,7 @@ int apc_request_init(TSRMLS_D)
 
     return 0;
 }
-
+//请求结束调用
 int apc_request_shutdown(TSRMLS_D)
 {
 

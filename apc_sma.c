@@ -184,20 +184,22 @@ static APC_HOTSPOT size_t sma_allocate(sma_header_t* header, size_t size, size_t
     block_t* prvnextfit;    /* block before next fit */
     size_t realsize;        /* actual size of block needed, including header */
     const size_t block_size = ALIGNWORD(sizeof(struct block_t));
-
+    //真正需要分配的空间
     realsize = ALIGNWORD(size + block_size);
 
     /*
      * First, insure that the segment contains at least realsize free bytes,
      * even if they are not contiguous.
      */
+    //segment 的头地址
     shmaddr = header;
-
+    //内存块是否有支配realsize的空间
     if (header->avail < realsize) {
         return -1;
     }
 
     prvnextfit = 0;     /* initially null (no fit) */
+    //first节点
     prv = BLOCKAT(ALIGNWORD(sizeof(sma_header_t)));
     CHECK_CANARY(prv);
 
@@ -331,7 +333,7 @@ static APC_HOTSPOT size_t sma_deallocate(void* shmaddr, size_t offset)
 /* }}} */
 
 /* {{{ apc_sma_init */
-
+//初始化内存池
 void apc_sma_init(int numseg, size_t segsize, char *mmap_file_mask TSRMLS_DC)
 {
     uint i;
@@ -356,9 +358,10 @@ void apc_sma_init(int numseg, size_t segsize, char *mmap_file_mask TSRMLS_DC)
 #else
     sma_numseg = numseg > 0 ? numseg : DEFAULT_NUMSEG;
 #endif
-
+    //内存块大小
     sma_segsize = segsize > 0 ? segsize : DEFAULT_SEGSIZE;
-
+    //申请内存块 
+    //apc_emalloc被定义为apc.c
     sma_segments = (apc_segment_t*) apc_emalloc((sma_numseg * sizeof(apc_segment_t)) TSRMLS_CC);
 
     for (i = 0; i < sma_numseg; i++) {
@@ -374,12 +377,16 @@ void apc_sma_init(int numseg, size_t segsize, char *mmap_file_mask TSRMLS_DC)
 #endif
         
         sma_segments[i].size = sma_segsize;
-
+        //获取第1哥内存块
         shmaddr = sma_segments[i].shmaddr;
 
         header = (sma_header_t*) shmaddr;
+        //apc_lock.h
+        //创建锁机制 保存在header->sma_lock
         apc_lck_create(NULL, 0, 1, header->sma_lock);
         header->segsize = sma_segsize;
+        //计算可用的空间
+        // -sizeof(sma_header_t) first和last block = ALIGNWORD(sizeof(block_t))
         header->avail = sma_segsize - ALIGNWORD(sizeof(sma_header_t)) - ALIGNWORD(sizeof(block_t)) - ALIGNWORD(sizeof(block_t));
 #if ALLOC_DISTRIBUTION
         {
@@ -387,28 +394,40 @@ void apc_sma_init(int numseg, size_t segsize, char *mmap_file_mask TSRMLS_DC)
            for(j=0; j<30; j++) header->adist[j] = 0;
         }
 #endif
+        //first block信息
         first = BLOCKAT(ALIGNWORD(sizeof(sma_header_t)));
         first->size = 0;
+        //下一个block位置
         first->fnext = ALIGNWORD(sizeof(sma_header_t)) + ALIGNWORD(sizeof(block_t));
+        //上一个block位置
         first->fprev = 0;
         first->prev_size = 0;
         SET_CANARY(first);
 #ifdef __APC_SMA_DEBUG__
         block->id = -1;
 #endif
+        //空节点block
         empty = BLOCKAT(first->fnext);
+        //思考：为什么empty->size的值不是 header->avail？
+        //因为empty节点也是一个block结构,SO,会占据一定的空间
         empty->size = header->avail - ALIGNWORD(sizeof(block_t));
+        //下一个block位置
         empty->fnext = OFFSET(empty) + empty->size;
+        //上一个block位置
         empty->fprev = ALIGNWORD(sizeof(sma_header_t));
         empty->prev_size = 0;
         SET_CANARY(empty);
 #ifdef __APC_SMA_DEBUG__
         empty->id = -1;
 #endif
+        //last block地址
         last = BLOCKAT(empty->fnext);
         last->size = 0;
+        //下一个block位置
         last->fnext = 0;
+        //上一个block位置
         last->fprev =  OFFSET(empty);
+        //上一个block块大小
         last->prev_size = empty->size;
         SET_CANARY(last);
 #ifdef __APC_SMA_DEBUG__
@@ -419,6 +438,7 @@ void apc_sma_init(int numseg, size_t segsize, char *mmap_file_mask TSRMLS_DC)
 /* }}} */
 
 /* {{{ apc_sma_cleanup */
+//释放内存池
 void apc_sma_cleanup(TSRMLS_D)
 {
     uint i;
@@ -447,8 +467,11 @@ void* apc_sma_malloc_ex(size_t n, size_t fragment, size_t* allocated TSRMLS_DC)
 
 restart:
     assert(sma_initialized);
+    //sma_lastseg标识最后一次申请空间的内存块
+    //SMA_LCK(sma_lastseg) 返回segment的锁
+    //LOCK(XXX): 定义于apc_lock.h 获取segment锁
     LOCK(SMA_LCK(sma_lastseg));
-
+    //#define SMA_HDR(i)  ((sma_header_t*)((sma_segments[i]).shmaddr))
     off = sma_allocate(SMA_HDR(sma_lastseg), n, fragment, allocated);
 
     if(off == -1 && APCG(current_cache)) { 
@@ -469,7 +492,7 @@ restart:
     }
     
     UNLOCK(SMA_LCK(sma_lastseg));
-
+    //从内存块中查找
     for (i = 0; i < sma_numseg; i++) {
         if (i == sma_lastseg) {
             continue;
@@ -510,6 +533,7 @@ restart:
 /* }}} */
 
 /* {{{ apc_sma_malloc */
+//申请内存
 void* apc_sma_malloc(size_t n TSRMLS_DC)
 {
     size_t allocated;
