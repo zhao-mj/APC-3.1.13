@@ -75,9 +75,6 @@ PHP_FUNCTION(apc_exists);
 /* }}} */
 
 /* {{{ ZEND_DECLARE_MODULE_GLOBALS(apc) */
-//#define ZEND_DECLARE_MODULE_GLOBALS(module_name)  zend_##module_name##_globals module_name##_globals;
-// ZEND_DECLARE_MODULE_GLOBALS(apc)=> zend_apc_globals apc_globals;
-//zend_apc_globals定义在apc_globals.h文件
 ZEND_DECLARE_MODULE_GLOBALS(apc)
 
 /* True globals */
@@ -332,7 +329,6 @@ extern int apc_rfc1867_progress(unsigned int event, void *event_data, void **ext
 #endif
 
 /* {{{ PHP_MINIT_FUNCTION(apc) */
-//sapi启动时调用 =>apc->module_startup_func
 static PHP_MINIT_FUNCTION(apc)
 {
     ZEND_INIT_MODULE_GLOBALS(apc, php_apc_init_globals, php_apc_shutdown_globals);
@@ -1701,10 +1697,10 @@ zend_module_entry apc_module_entry = {
     STANDARD_MODULE_HEADER,
     "apc",
     apc_functions,
-    PHP_MINIT(apc), //sapi_startup
-    PHP_MSHUTDOWN(apc), //sapi_end
-    PHP_RINIT(apc), //request_startup
-    PHP_RSHUTDOWN(apc), //request_end
+    PHP_MINIT(apc),
+    PHP_MSHUTDOWN(apc),
+    PHP_RINIT(apc),
+    PHP_RSHUTDOWN(apc),
     PHP_MINFO(apc),
     PHP_APC_VERSION,
     STANDARD_MODULE_PROPERTIES

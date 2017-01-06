@@ -1442,7 +1442,6 @@ zend_op_array* apc_copy_op_array(zend_op_array* dst, zend_op_array* src, apc_con
 /* }}} */
 
 /* {{{ apc_copy_new_functions */
-//保存新函数
 apc_function_t* apc_copy_new_functions(int old_count, apc_context_t* ctxt TSRMLS_DC)
 {
     apc_function_t* array;
@@ -1495,7 +1494,6 @@ apc_function_t* apc_copy_new_functions(int old_count, apc_context_t* ctxt TSRMLS
 /* }}} */
 
 /* {{{ apc_copy_new_classes */
-//保存class
 apc_class_t* apc_copy_new_classes(zend_op_array* op_array, int old_count, apc_context_t *ctxt TSRMLS_DC)
 {
     apc_class_t* array;

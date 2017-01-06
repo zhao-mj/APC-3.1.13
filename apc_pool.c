@@ -439,11 +439,10 @@ static apc_pool* apc_realpool_create(apc_pool_type type, apc_malloc_t allocate, 
     }
 
     rpool->parent.type = type;
-    //申请
+
     rpool->parent.allocate = allocate;
-    //释放
     rpool->parent.deallocate = deallocate;
-    //大小
+
     rpool->parent.size = sizeof(apc_realpool) + ALIGNWORD(dsize);
 
     rpool->parent.palloc = apc_realpool_alloc;

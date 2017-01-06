@@ -46,7 +46,7 @@
 #ifndef SHM_A
 # define SHM_A 0222 /* write permission */
 #endif
-//创建共享内存
+
 int apc_shm_create(int proj, size_t size TSRMLS_DC)
 {
     int shmid;			/* shared memory id */
@@ -54,52 +54,23 @@ int apc_shm_create(int proj, size_t size TSRMLS_DC)
     key_t key = IPC_PRIVATE;	/* shm key */
 
     oflag = IPC_CREAT | SHM_R | SHM_A;
-    /*
-    shmget: 
-    函数说明：  得到一个共享内存标识符或创建一个共享内存对象并返回共享内存标识符
-    函数原型：  int shmget(key_t key, size_t size, int shmflg)
-    函数传入值：key ：(IPC_PRIVATE)：会建立新共享内存对象; 大于0的32位整数：视参数shmflg来确定操作。通常要求此值来源于ftok返回的IPC键值
-                size: 大于0的整数：新建的共享内存大小，以字节为单位; 0：只获取共享内存时指定为0
-                shmflg： 
-                  0：取共享内存标识符，若不存在则函数会报错
-                  IPC_CREAT：当shmflg&IPC_CREAT为真时，如果内核中不存在键值与key相等的共享内存，则新建一个共享内存；如果存在这样的共享内存，返回此共享内存的标识符
-                  IPC_CREAT|IPC_EXCL：如果内核中不存在键值 与key相等的共享内存，则新建一个共享内存；如果存在这样的共享内存则报错
-    函数返回值:
-                成功：返回共享内存的标识符
-                出错：-1，错误原因存于error中
-    */
     if ((shmid = shmget(key, size, oflag)) < 0) {
         apc_error("apc_shm_create: shmget(%d, %d, %d) failed: %s. It is possible that the chosen SHM segment size is higher than the operation system allows. Linux has usually a default limit of 32MB per segment." TSRMLS_CC, key, size, oflag, strerror(errno));
     }
 
     return shmid;
 }
-//移除内存
+
 void apc_shm_destroy(int shmid)
 {
     /* we expect this call to fail often, so we do not check */
-    /**
-    shmctl:
-    函数说明: 完成对共享内存的控制
-    函数原型: int shmctl(int shmid, int cmd, struct shmid_ds *buf)
-    函数传入值: shmid :共享内存标识符
-                cmd: 
-                    IPC_STAT：得到共享内存的状态，把共享内存的shmid_ds结构复制到buf中
-                    IPC_SET：改变共享内存的状态，把buf所指的shmid_ds结构中的uid、gid、mode复制到共享内存的shmid_ds结构内
-                    IPC_RMID：删除这片共享内存
-                buf: 共享内存管理结构体。具体说明参见共享内存内核结构定义部分
-    函数返回值: 
-                成功：0
-                出错：-1，错误原因存于error中
-
-     */
     shmctl(shmid, IPC_RMID, 0);
 }
-//将共享内存地址保存在segment对象
+
 apc_segment_t apc_shm_attach(int shmid, size_t size TSRMLS_DC)
 {
     apc_segment_t segment; /* shm segment */
-    //
+
     if ((long)(segment.shmaddr = shmat(shmid, 0, 0)) == -1) {
         apc_error("apc_shm_attach: shmat failed:" TSRMLS_CC);
     }
