@@ -41,6 +41,7 @@ int apc_fcntl_create(const char* pathname TSRMLS_DC)
     int fd;
     if(pathname == NULL) {
         char lock_path[] = "/tmp/.apc.XXXXXX";
+        //创建临时文件
         mktemp(lock_path);
         fd = open(lock_path, O_RDWR|O_CREAT, 0666);
         if(fd > 0 ) {

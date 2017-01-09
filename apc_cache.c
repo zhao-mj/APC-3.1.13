@@ -267,6 +267,7 @@ static void prevent_garbage_collection(apc_cache_entry_t* entry)
 /* }}} */
 
 /* {{{ apc_cache_create */
+//初始化apc_cache结构
 apc_cache_t* apc_cache_create(int size_hint, int gc_ttl, int ttl TSRMLS_DC)
 {
     apc_cache_t* cache;

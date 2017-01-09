@@ -201,7 +201,7 @@ static PHP_INI_MH(OnUpdateShmSize) /* {{{ */
     if(s <= 0) {
         return FAILURE;
     }
-
+    //内存不得小于1M
     if(s < 1048576L) {
         /* if it's less than 1Mb, they are probably using the old syntax */
         php_error_docref(NULL TSRMLS_CC, E_WARNING, "apc.shm_size now uses M/G suffixes, please update your ini files");

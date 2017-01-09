@@ -116,6 +116,7 @@ struct block_t {
 #endif
 
 /* {{{ MINBLOCKSIZE */
+//最小的BLOCK大小
 #define MINBLOCKSIZE (ALIGNWORD(1) + ALIGNWORD(sizeof(block_t)))
 /* }}} */
 
@@ -204,11 +205,13 @@ static APC_HOTSPOT size_t sma_allocate(sma_header_t* header, size_t size, size_t
     CHECK_CANARY(prv);
 
     while (prv->fnext != 0) {
+        //从empty节点开始遍历
         cur = BLOCKAT(prv->fnext);
 #ifdef __APC_SMA_DEBUG__
         CHECK_CANARY(cur);
 #endif
         /* If it can fit realsize bytes in cur block, stop searching */
+        //剩余空间>realsize
         if (cur->size >= realsize) {
             prvnextfit = prv;
             break;
@@ -240,6 +243,7 @@ static APC_HOTSPOT size_t sma_allocate(sma_header_t* header, size_t size, size_t
         oldsize = cur->size;
         cur->size = realsize;
         *(allocated) = cur->size - block_size;
+        //next的block节点信息
         nxt = NEXT_SBLOCK(cur);
         nxt->prev_size = 0;                       /* block is alloc'd */
         nxt->size = oldsize - realsize;           /* and fix the size */
@@ -275,6 +279,7 @@ static APC_HOTSPOT size_t sma_allocate(sma_header_t* header, size_t size, size_t
 /* }}} */
 
 /* {{{ sma_deallocate: deallocates the block at the given offset */
+//释放空间
 static APC_HOTSPOT size_t sma_deallocate(void* shmaddr, size_t offset)
 {
     sma_header_t* header;   /* header of shared memory segment */
@@ -282,7 +287,7 @@ static APC_HOTSPOT size_t sma_deallocate(void* shmaddr, size_t offset)
     block_t* prv;       /* the block before cur */
     block_t* nxt;       /* the block after cur */
     size_t size;        /* size of deallocated block */
-
+    //往前偏移sizeof(block_t)
     offset -= ALIGNWORD(sizeof(struct block_t));
     assert(offset >= 0);
 
@@ -304,13 +309,15 @@ static APC_HOTSPOT size_t sma_deallocate(void* shmaddr, size_t offset)
         RESET_CANARY(cur);
         cur = prv;
     }
-
+    //下一个为空闲内存
     nxt = NEXT_SBLOCK(cur);
     if (nxt->fnext != 0) {
         assert(NEXT_SBLOCK(NEXT_SBLOCK(cur))->prev_size == nxt->size);
         /* cur and nxt shared an edge, combine them */
+        //改变nxt前一个block的fnext和后一个block的fprev的地址
         BLOCKAT(nxt->fnext)->fprev = nxt->fprev;
         BLOCKAT(nxt->fprev)->fnext = nxt->fnext;
+        //空闲大小+nxt->size
         cur->size += nxt->size;
 #ifdef __APC_SMA_DEBUG__
         CHECK_CANARY(nxt);
@@ -318,14 +325,18 @@ static APC_HOTSPOT size_t sma_deallocate(void* shmaddr, size_t offset)
 #endif
         RESET_CANARY(nxt);
     }
-
+    //修改cur下一个block的prev_size属性
     NEXT_SBLOCK(cur)->prev_size = cur->size;
 
     /* insert new block after prv */
     prv = BLOCKAT(ALIGNWORD(sizeof(sma_header_t)));
+    //修改cur->fnext的值
     cur->fnext = prv->fnext;
+    //修改prev fnext的值
     prv->fnext = OFFSET(cur);
+    //修改cur->fprev的值
     cur->fprev = OFFSET(prv);
+    //修改cur 下一个block的fprev值
     BLOCKAT(cur->fnext)->fprev = OFFSET(cur);
 
     return size;
@@ -582,6 +593,7 @@ void apc_sma_free(void* p TSRMLS_DC)
 
     
     for (i = 0; i < sma_numseg; i++) {
+        //计算*p节点漂移的位置 如果差值范围>sma_segsize 则表明不在这个内存块上.
         offset = (size_t)((char *)p - SMA_ADDR(i));
         if (p >= (void*)SMA_ADDR(i) && offset < sma_segsize) {
             LOCK(SMA_LCK(i));

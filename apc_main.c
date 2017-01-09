@@ -338,7 +338,7 @@ static zend_op_array* cached_compile(zend_file_handle* h,
 
     cache_entry = (apc_cache_entry_t*) apc_stack_top(APCG(cache_stack));
     assert(cache_entry != NULL);
-
+    //注册class
     if (cache_entry->data.file.classes) {
         int lazy_classes = APCG(lazy_classes);
         for (i = 0; cache_entry->data.file.classes[i].class_entry != NULL; i++) {
@@ -347,7 +347,7 @@ static zend_op_array* cached_compile(zend_file_handle* h,
             }
         }
     }
-
+    //注册function
     if (cache_entry->data.file.functions) {
         int lazy_functions = APCG(lazy_functions);
         for (i = 0; cache_entry->data.file.functions[i].function != NULL; i++) {
@@ -542,6 +542,7 @@ static zend_op_array* my_compile_file(zend_file_handle* h,
                             (void *)&dummy, sizeof(int), NULL);
 
         apc_stack_push(APCG(cache_stack), cache_entry TSRMLS_CC);
+        //注册op_array class和function环境
         op_array = cached_compile(h, type, &ctxt TSRMLS_CC);
 
         if(op_array) {
