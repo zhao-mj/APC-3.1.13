@@ -298,9 +298,10 @@ static APC_HOTSPOT size_t sma_deallocate(void* shmaddr, size_t offset)
     header = (sma_header_t*) shmaddr;
     header->avail += cur->size;
     size = cur->size;
-
+    //前一个block为空闲块
     if (cur->prev_size != 0) {
         /* remove prv from list */
+        //前一个block节点
         prv = PREV_SBLOCK(cur);
         BLOCKAT(prv->fnext)->fprev = prv->fprev;
         BLOCKAT(prv->fprev)->fnext = prv->fnext;
