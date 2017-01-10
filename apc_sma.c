@@ -52,9 +52,9 @@ static int sma_lastseg = 0;         /* index of MRU segment */
 
 typedef struct sma_header_t sma_header_t;
 struct sma_header_t {
-    apc_lck_t sma_lock;     /* segment lock, MUST BE ALIGNED for futex locks */
-    size_t segsize;         /* size of entire segment */
-    size_t avail;           /* bytes available (not necessarily contiguous) */
+    apc_lck_t sma_lock; //内存块锁    /* segment lock, MUST BE ALIGNED for futex locks */
+    size_t segsize;  //内存块大小       /* size of entire segment */
+    size_t avail; //可用的空间          /* bytes available (not necessarily contiguous) */
 #if ALLOC_DISTRIBUTION
     size_t adist[30];
 #endif
@@ -81,10 +81,10 @@ static volatile size_t block_id = 0;
 
 typedef struct block_t block_t;
 struct block_t {
-    size_t size;       /* size of this block */
-    size_t prev_size;  /* size of sequentially previous block, 0 if prev is allocated */
-    size_t fnext;      /* offset in segment of next free block */
-    size_t fprev;      /* offset in segment of prev free block */
+    size_t size;  //当前block大小     /* size of this block */
+    size_t prev_size; //前一个block可用的空间, ==0时，表示前一个block已被使用 /* size of sequentially previous block, 0 if prev is allocated */
+    size_t fnext; //下一个空闲block     /* offset in segment of next free block */
+    size_t fprev; //上一个空闲block     /* offset in segment of prev free block */
 #ifdef APC_SMA_CANARIES
     size_t canary;     /* canary to check for memory overwrites */
 #endif
@@ -96,12 +96,15 @@ struct block_t {
 /* The macros BLOCKAT and OFFSET are used for convenience throughout this
  * module. Both assume the presence of a variable shmaddr that points to the
  * beginning of the shared memory segment in question. */
-
+//偏移offset位置
 #define BLOCKAT(offset) ((block_t*)((char *)shmaddr + offset))
+//block块在当前内存块的偏移量
 #define OFFSET(block) ((size_t)(((char*)block) - (char*)shmaddr))
 
 /* macros for getting the next or previous sequential block */
+//下一个block位置
 #define NEXT_SBLOCK(block) ((block_t*)((char*)block + block->size))
+//上一个block位置
 #define PREV_SBLOCK(block) (block->prev_size ? ((block_t*)((char*)block - block->prev_size)) : NULL)
 
 /* Canary macros for setting, checking and resetting memory canaries */

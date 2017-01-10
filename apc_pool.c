@@ -41,6 +41,7 @@ static apc_pool* apc_realpool_create(apc_pool_type type, apc_malloc_t, apc_free_
 /* }}} */
 
 /* {{{ apc_pool_create */
+//pool_type=APC_MEDIUM_POOL, apc_sma_malloc, apc_sma_free, apc_sma_protect, apc_sma_unprotect
 apc_pool* apc_pool_create(apc_pool_type pool_type, 
                             apc_malloc_t allocate, 
                             apc_free_t deallocate,
@@ -209,7 +210,7 @@ static const unsigned char decaff[] =  {
 static pool_block* create_pool_block(apc_realpool *rpool, size_t size TSRMLS_DC)
 {
     apc_malloc_t allocate = rpool->parent.allocate;
-
+    //block头
     size_t realsize = sizeof(pool_block) + ALIGNWORD(size);
 
     pool_block* entry = allocate(realsize TSRMLS_CC);

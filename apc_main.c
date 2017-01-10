@@ -807,6 +807,7 @@ int apc_module_init(int module_number TSRMLS_DC)
 #else
     apc_sma_init(APCG(shm_segments), APCG(shm_size), NULL TSRMLS_CC);
 #endif
+    //创建文件缓存的条目
     apc_cache = apc_cache_create(APCG(num_files_hint), APCG(gc_ttl), APCG(ttl) TSRMLS_CC);
     apc_user_cache = apc_cache_create(APCG(user_entries_hint), APCG(gc_ttl), APCG(user_ttl) TSRMLS_CC);
 
@@ -899,6 +900,7 @@ int apc_module_shutdown(TSRMLS_D)
 
     apc_cache_destroy(apc_cache TSRMLS_CC);
     apc_cache_destroy(apc_user_cache TSRMLS_CC);
+    //清除内存内容
     apc_sma_cleanup(TSRMLS_C);
 
     APCG(initialized) = 0;

@@ -1488,7 +1488,7 @@ apc_function_t* apc_copy_new_functions(int old_count, apc_context_t* ctxt TSRMLS
         CHECK(array[i].function = my_copy_function(NULL, fun, ctxt TSRMLS_CC));
         zend_hash_move_forward(CG(function_table));
     }
-
+    //最后一个元素function设置为NULL
     array[i].function = NULL;
     return array;
 }
@@ -1562,7 +1562,7 @@ apc_class_t* apc_copy_new_classes(zend_op_array* op_array, int old_count, apc_co
 
         zend_hash_move_forward(CG(class_table));
     }
-
+    //最后一个元素class_entry设置为NULL
     array[i].class_entry = NULL;
     return array;
 }

@@ -273,17 +273,18 @@ apc_cache_t* apc_cache_create(int size_hint, int gc_ttl, int ttl TSRMLS_DC)
     apc_cache_t* cache;
     int cache_size;
     int num_slots;
-
+    //计算对应的二进制大小
     num_slots = make_prime(size_hint > 0 ? size_hint : 2000);
-
+    //创建cache对象
     cache = (apc_cache_t*) apc_emalloc(sizeof(apc_cache_t) TSRMLS_CC);
     cache_size = sizeof(cache_header_t) + num_slots*sizeof(slot_t*);
-
+    //向sma内存块申请一块内存,保存至shmaddr
     cache->shmaddr = apc_sma_malloc(cache_size TSRMLS_CC);
     if(!cache->shmaddr) {
         apc_error("Unable to allocate shared memory for cache structures.  (Perhaps your shared memory size isn't large enough?). " TSRMLS_CC);
         return NULL;
     }
+    //重置cache->shmaddr内存块内容
     memset(cache->shmaddr, 0, cache_size);
 
     cache->header = (cache_header_t*) cache->shmaddr;

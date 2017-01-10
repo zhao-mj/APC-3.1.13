@@ -99,7 +99,18 @@ void apc_shm_destroy(int shmid)
 apc_segment_t apc_shm_attach(int shmid, size_t size TSRMLS_DC)
 {
     apc_segment_t segment; /* shm segment */
-    //
+    /**
+    shmat：
+    函数说明：连接共享内存标识符为shmid的共享内存，连接成功后把共享内存区对象映射到调用进程的地址空间，随后可像本地空间一样访问
+    函数原型：void *shmat(int shmid, const void *shmaddr, int shmflg)
+    函数传入值：
+              shmid：共享内存标识符
+              shmaddr：指定共享内存出现在进程内存地址的什么位置，直接指定为NULL让内核自己决定一个合适的地址位置
+              shmflg：SHM_RDONLY：为只读模式，其他为读写模式
+    函数返回值
+              成功：附加好的共享内存地址
+              出错：-1，错误原因存于error中
+    */
     if ((long)(segment.shmaddr = shmat(shmid, 0, 0)) == -1) {
         apc_error("apc_shm_attach: shmat failed:" TSRMLS_CC);
     }
@@ -124,6 +135,14 @@ apc_segment_t apc_shm_attach(int shmid, size_t size TSRMLS_DC)
 
 void apc_shm_detach(apc_segment_t* segment TSRMLS_DC)
 {
+    //断开共享连接
+    /**
+    shmdt：
+    函数说明：与shmat函数相反，是用来断开与共享内存附加点的地址，禁止本进程访问此片共享内存
+    函数原型：int shmdt(const void *shmaddr)
+    函数传入值：shmaddr：连接的共享内存的起始地址
+    函数返回值：成功：0  出错：-1，错误原因存于error中
+     */
     if (shmdt(segment->shmaddr) < 0) {
         apc_error("apc_shm_detach: shmdt failed:" TSRMLS_CC);
     }
