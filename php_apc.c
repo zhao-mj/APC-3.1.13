@@ -587,9 +587,9 @@ int _apc_store(char *strkey, int strkey_len, const zval *val, const unsigned int
     }
 
     HANDLE_BLOCK_INTERRUPTIONS();
-
+    //设置当前内存为apc_user_cache
     APCG(current_cache) = apc_user_cache;
-
+    //创建内存管理
     ctxt.pool = apc_pool_create(APC_SMALL_POOL, apc_sma_malloc, apc_sma_free, apc_sma_protect, apc_sma_unprotect TSRMLS_CC);
     if (!ctxt.pool) {
         HANDLE_UNBLOCK_INTERRUPTIONS();
@@ -611,11 +611,11 @@ int _apc_store(char *strkey, int strkey_len, const zval *val, const unsigned int
     if (apc_cache_is_last_key(apc_user_cache, &key, t TSRMLS_CC)) {
         goto freepool;
     }
-
+    //创建key
     if (!(entry = apc_cache_make_user_entry(strkey, strkey_len, val, &ctxt, ttl TSRMLS_CC))) {
         goto freepool;
     }
-
+    //保存至cache中
     if (!apc_cache_user_insert(apc_user_cache, key, entry, &ctxt, t, exclusive TSRMLS_CC)) {
 freepool:
         apc_pool_destroy(ctxt.pool TSRMLS_CC);
@@ -634,6 +634,7 @@ nocache:
 
 /* {{{ apc_store_helper(INTERNAL_FUNCTION_PARAMETERS, const int exclusive)
  */
+//缓存user data
 static void apc_store_helper(INTERNAL_FUNCTION_PARAMETERS, const int exclusive)
 {
     zval *key = NULL;
@@ -683,6 +684,7 @@ static void apc_store_helper(INTERNAL_FUNCTION_PARAMETERS, const int exclusive)
 
 /* {{{ proto int apc_store(mixed key, mixed var [, long ttl ])
  */
+//当缓存存在时，则进行覆盖
 PHP_FUNCTION(apc_store) {
     apc_store_helper(INTERNAL_FUNCTION_PARAM_PASSTHRU, 0);
 }
@@ -690,6 +692,7 @@ PHP_FUNCTION(apc_store) {
 
 /* {{{ proto int apc_add(mixed key, mixed var [, long ttl ])
  */
+//当缓存存在且未过期时，则跳过
 PHP_FUNCTION(apc_add) {
     apc_store_helper(INTERNAL_FUNCTION_PARAM_PASSTHRU, 1);
 }
