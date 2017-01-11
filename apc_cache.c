@@ -619,6 +619,8 @@ int apc_cache_user_insert(apc_cache_t* cache, apc_cache_key_t key, apc_cache_ent
              * the user entry already exists and it has no ttl, or
              * there is a ttl and the entry has not timed out yet.
              */
+            //exclusive=1 表示apc_add操作
+            //apc_add操作且该key未过期，则跳出.
             if(exclusive && (  !(*slot)->value->data.user.ttl ||
                               ( (*slot)->value->data.user.ttl && (time_t) ((*slot)->creation_time + (*slot)->value->data.user.ttl) >= t ) 
                             ) ) {
