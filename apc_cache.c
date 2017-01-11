@@ -168,6 +168,7 @@ slot_t* make_slot(apc_cache_key_t *key, apc_cache_entry_t* value, slot_t* next, 
 /* }}} */
 
 /* {{{ free_slot */
+//释放slot占用的缓存
 static void free_slot(slot_t* slot TSRMLS_DC)
 {
     apc_pool_destroy(slot->value->pool TSRMLS_CC);
@@ -175,17 +176,24 @@ static void free_slot(slot_t* slot TSRMLS_DC)
 /* }}} */
 
 /* {{{ remove_slot */
+//删除slot下一个节点
 static void remove_slot(apc_cache_t* cache, slot_t** slot TSRMLS_DC)
 {
+    //保存slot下一个节点
     slot_t* dead = *slot;
+    //将slot下下一个保存的地址保存在*slot中
     *slot = (*slot)->next;
-
+    //mem_size-dead->value->mem_size
     cache->header->mem_size -= dead->value->mem_size;
+    //num_entries--
     CACHE_FAST_DEC(cache, cache->header->num_entries);
+    //cache引用技术<=0
     if (dead->value->ref_count <= 0) {
+        //移除该slot
         free_slot(dead TSRMLS_CC);
     }
     else {
+        //待删除列表
         dead->next = cache->header->deleted_list;
         dead->deletion_time = time(0);
         cache->header->deleted_list = dead;
@@ -194,6 +202,7 @@ static void remove_slot(apc_cache_t* cache, slot_t** slot TSRMLS_DC)
 /* }}} */
 
 /* {{{ process_pending_removals */
+//移除删除缓冲区过期key
 static void process_pending_removals(apc_cache_t* cache TSRMLS_DC)
 {
     slot_t** slot;
@@ -212,8 +221,9 @@ static void process_pending_removals(apc_cache_t* cache TSRMLS_DC)
     now = time(0);
 
     while (*slot != NULL) {
+        //(*slot)->deletion_time:remove_slot操作时间
         int gc_sec = cache->gc_ttl ? (now - (*slot)->deletion_time) : 0;
-
+        //引用计数<=0 或者 删除操作已超过 cache->gc_ttl 秒
         if ((*slot)->value->ref_count <= 0 || gc_sec > cache->gc_ttl) {
             slot_t* dead = *slot;
 
@@ -229,9 +239,11 @@ static void process_pending_removals(apc_cache_t* cache TSRMLS_DC)
                 }
             }
             *slot = dead->next;
+            //释放
             free_slot(dead TSRMLS_CC);
         }
         else {
+            //向下查找
             slot = &(*slot)->next;
         }
     }
@@ -304,6 +316,7 @@ apc_cache_t* apc_cache_create(int size_hint, int gc_ttl, int ttl TSRMLS_DC)
     CREATE_LOCK(cache->header->wrlock);
 #endif
     memset(cache->slots, 0, sizeof(slot_t*)*num_slots);
+    //内存不足时 调用
     cache->expunge_cb = apc_cache_expunge;
     cache->has_lock = 0;
 
@@ -357,6 +370,7 @@ void apc_cache_clear(apc_cache_t* cache TSRMLS_DC)
 /* }}} */
 
 /* {{{ apc_cache_expunge */
+//回收内存
 static void apc_cache_expunge(apc_cache_t* cache, size_t size TSRMLS_DC)
 {
     int i;
@@ -371,7 +385,10 @@ static void apc_cache_expunge(apc_cache_t* cache, size_t size TSRMLS_DC)
          * If cache->ttl is not set, we wipe out the entire cache when
          * we run out of space.
          */
+        //请求锁
         CACHE_SAFE_LOCK(cache);
+        //当未设置ttl时,当剩余内存不足APCG(shm_size)/2，则清楚整个内存
+        //移除删除列表的过期内存
         process_pending_removals(cache TSRMLS_CC);
         if (apc_sma_get_avail_mem() > (size_t)(APCG(shm_size)/2)) {
             /* probably a queued up expunge, we don't need to do this */
@@ -401,8 +418,9 @@ clear_all:
          * default apc.user_ttl and still provide a specific ttl for each entry
          * on insert
          */
-
+        //请求锁
         CACHE_SAFE_LOCK(cache);
+        //移除删除列表的过期内存
         process_pending_removals(cache TSRMLS_CC);
         if (apc_sma_get_avail_mem() > (size_t)(APCG(shm_size)/2)) {
             /* probably a queued up expunge, we don't need to do this */
@@ -410,6 +428,7 @@ clear_all:
             return;
         }
         cache->header->busy = 1;
+        //cache expunges计数+1
         CACHE_FAST_INC(cache, cache->header->expunges);
         for (i = 0; i < cache->num_slots; i++) {
             p = &cache->slots[i];
@@ -418,6 +437,7 @@ clear_all:
                  * For the user cache we look at the individual entry ttl values
                  * and if not set fall back to the default ttl for the user cache
                  */
+                //用户自定义缓存
                 if((*p)->value->type == APC_CACHE_ENTRY_USER) {
                     if((*p)->value->data.user.ttl) {
                         if((time_t) ((*p)->creation_time + (*p)->value->data.user.ttl) < t) {
@@ -430,19 +450,22 @@ clear_all:
                             continue;
                         }
                     }
-                } else if((*p)->access_time < (t - cache->ttl)) {
+                } else if((*p)->access_time < (t - cache->ttl)) { 
+                    //access_time缓存访问时间
+                    //系统缓存
                     remove_slot(cache, p TSRMLS_CC);
                     continue;
                 }
                 p = &(*p)->next;
             }
         }
-
+        //上述操作后，仍然无法申请到size空间的内存，则跳到clear_all
         if (!apc_sma_get_avail_size(size)) {
             /* TODO: re-do this to remove goto across locked sections */
             goto clear_all;
         }
         memset(&cache->header->lastkey, 0, sizeof(apc_keyid_t));
+        //修改cache->header->busy标识
         cache->header->busy = 0;
         CACHE_SAFE_UNLOCK(cache);
     }
@@ -504,8 +527,11 @@ static inline int _apc_cache_insert(apc_cache_t* cache,
     }
 
     value->mem_size = ctxt->pool->size;
+    //
     cache->header->mem_size += ctxt->pool->size;
+    //num_entries++
     CACHE_FAST_INC(cache, cache->header->num_entries);
+    //num_inserts++
     CACHE_FAST_INC(cache, cache->header->num_inserts);
 
     return 1;
@@ -642,7 +668,7 @@ slot_t* apc_cache_find_slot(apc_cache_t* cache, apc_cache_key_t key, time_t t TS
 {
     slot_t** slot;
     volatile slot_t* retval = NULL;
-
+    //获取读锁
     CACHE_RDLOCK(cache);
     if(key.type == APC_CACHE_KEY_FILE) slot = &cache->slots[hash(key) % cache->num_slots];
     else slot = &cache->slots[key.h % cache->num_slots];
@@ -663,12 +689,16 @@ slot_t* apc_cache_find_slot(apc_cache_t* cache, apc_cache_key_t key, time_t t TS
                     CACHE_RDUNLOCK(cache);
                     return NULL;
                 }
+                //命中缓存+1
                 CACHE_SAFE_INC(cache, (*slot)->num_hits);
+                //slot_t引用计数+1
                 CACHE_SAFE_INC(cache, (*slot)->value->ref_count);
                 (*slot)->access_time = t;
                 prevent_garbage_collection((*slot)->value);
+                //cache header num_hits+1
                 CACHE_FAST_INC(cache, cache->header->num_hits); 
                 retval = *slot;
+                //释放读锁
                 CACHE_RDUNLOCK(cache);
                 return (slot_t*)retval;
             }
@@ -689,6 +719,7 @@ slot_t* apc_cache_find_slot(apc_cache_t* cache, apc_cache_key_t key, time_t t TS
       }
       slot = &(*slot)->next;
     }
+    //命中缓存失败次数+1
     CACHE_FAST_INC(cache, cache->header->num_misses); 
     CACHE_RDUNLOCK(cache);
     return NULL;

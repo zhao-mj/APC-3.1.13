@@ -374,7 +374,7 @@ int apc_search_paths(const char* filename, const char* path, apc_fileinfo_t* fil
         fileinfo->fullpath = COPY_IF_CHANGED(path_for_open);
         return apc_restat(fileinfo TSRMLS_CC);
     }
-
+    //相对路径
     if (!IS_RELATIVE_PATH(path_for_open, strlen(path_for_open))) {
         paths = apc_tokenize(path, DEFAULT_DIR_SEPARATOR TSRMLS_CC);
         if (!paths)

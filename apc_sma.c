@@ -535,6 +535,7 @@ restart:
 
     /* I've tried being nice, but now you're just asking for it */
     if(!nuked) {
+        //当内存不足时 调用expunge_cb
         apc_cache->expunge_cb(apc_cache, (n+fragment) TSRMLS_CC);
         apc_user_cache->expunge_cb(apc_user_cache, (n+fragment) TSRMLS_CC);
         nuked = 1;

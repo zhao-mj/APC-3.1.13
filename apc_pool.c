@@ -64,8 +64,10 @@ void apc_pool_destroy(apc_pool *pool TSRMLS_DC)
 {
     apc_free_t deallocate = pool->deallocate;
     apc_pcleanup_t cleanup = pool->cleanup;
-
+    //清理pool的数据
+    //apc_realpool_cleanup
     cleanup(pool TSRMLS_CC);
+    //回收pool结构占用的空间
     deallocate(pool TSRMLS_CC);
 }
 /* }}} */
@@ -331,7 +333,12 @@ static APC_USED int apc_realpool_check_integrity(apc_realpool *rpool)
     size_t redsize;
 
     for(entry = rpool->head; entry != NULL; entry = entry->next) {
+        //数据块起始位置
         start = (unsigned char *)entry + ALIGNWORD(sizeof(pool_block));
+        //entry->mark:未使用的内存起始位置
+        //entry->capacity: 数据块大小
+        //entry->avail: 数据块可用空间
+        //如果不相等 return
         if((entry->mark - start) != (entry->capacity - entry->avail)) {
             return 0;
         }
@@ -388,6 +395,7 @@ static void apc_realpool_free(apc_pool *pool, void *p TSRMLS_DC)
 /* }}} */
 
 /* {{{ apc_realpool_cleanup */
+//从
 static void apc_realpool_cleanup(apc_pool *pool TSRMLS_DC) 
 {
     pool_block *entry;
@@ -398,7 +406,7 @@ static void apc_realpool_cleanup(apc_pool *pool TSRMLS_DC)
     assert(apc_realpool_check_integrity(rpool)!=0);
 
     entry = rpool->head;
-
+    //从头部遍历，逐个回收block内存
     while(entry->next != NULL) {
         tmp = entry->next;
         deallocate(entry TSRMLS_CC);
